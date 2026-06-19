@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkerExecutorTest {
 
-    private final WorkerExecutor executor = new WorkerExecutor(new DefaultPolicyEnforcer());
+    private final DefaultWorkerExecutor executor = new DefaultWorkerExecutor(new DefaultPolicyEnforcer());
 
     @Test
     void execute_successfulWorker() {

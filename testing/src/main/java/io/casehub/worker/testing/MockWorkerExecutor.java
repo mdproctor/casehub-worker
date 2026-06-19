@@ -2,15 +2,21 @@ package io.casehub.worker.testing;
 
 import io.casehub.worker.api.Worker;
 import io.casehub.worker.api.WorkerResult;
+import io.casehub.worker.runtime.WorkerExecutor;
+import io.quarkus.arc.DefaultBean;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class MockWorkerExecutor {
+@DefaultBean
+@ApplicationScoped
+public class MockWorkerExecutor implements WorkerExecutor {
     private final AtomicInteger executionCount = new AtomicInteger(0);
     private final AtomicReference<String> lastWorkerName = new AtomicReference<>();
 
+    @Override
     public WorkerResult execute(Worker worker, Map<String, Object> input) {
         executionCount.incrementAndGet();
         lastWorkerName.set(worker.name());
