@@ -21,4 +21,28 @@ class MockWorkerExecutorTest {
         assertThat(executor.executionCount()).isEqualTo(1);
         assertThat(executor.lastWorkerName()).isEqualTo("test");
     }
+
+    @Test
+    void execute_workerThrows_returnsFailed() {
+        MockWorkerExecutor mockExecutor = new MockWorkerExecutor();
+        Worker worker = TestWorkerBuilder.sync("throws",
+            input -> { throw new RuntimeException("mock failure"); });
+
+        WorkerResult result = mockExecutor.execute(worker, Map.of());
+        assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
+        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("mock failure");
+        assertThat(mockExecutor.executionCount()).isEqualTo(1);
+    }
+
+    @Test
+    void execute_workerThrowsNullMessage_returnsFailedWithClassName() {
+        MockWorkerExecutor mockExecutor = new MockWorkerExecutor();
+        Worker worker = TestWorkerBuilder.sync("npe",
+            input -> { throw new NullPointerException(); });
+
+        WorkerResult result = mockExecutor.execute(worker, Map.of());
+        assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
+        assertThat(((WorkerOutcome.Failed) result.outcome()).reason())
+            .isEqualTo("java.lang.NullPointerException");
+    }
 }

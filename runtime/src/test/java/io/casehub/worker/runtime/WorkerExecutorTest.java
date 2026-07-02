@@ -3,7 +3,6 @@ package io.casehub.worker.runtime;
 import io.casehub.platform.api.governance.ExecutionPolicy;
 import io.casehub.platform.api.governance.RetryPolicy;
 import io.casehub.platform.governance.DefaultPolicyEnforcer;
-import io.casehub.platform.governance.PolicyEnforcementException;
 
 import io.casehub.worker.api.Worker;
 import io.casehub.worker.api.WorkerFunction;
@@ -15,7 +14,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkerExecutorTest {
 
@@ -55,7 +53,7 @@ class WorkerExecutorTest {
     }
 
     @Test
-    void execute_exhaustsRetries_throwsPolicyException() {
+    void execute_exhaustsRetries_returnsFailed() {
         Worker worker = Worker.builder()
             .name("broken")
             .capabilityName("fail")
@@ -63,7 +61,51 @@ class WorkerExecutorTest {
             .executionPolicy(new ExecutionPolicy(null, new RetryPolicy(2, 10)))
             .build();
 
-        assertThatThrownBy(() -> executor.execute(worker, Map.of()))
-            .isInstanceOf(PolicyEnforcementException.class);
+        WorkerResult result = executor.execute(worker, Map.of());
+        assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
+        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("permanent");
+    }
+
+    @Test
+    void execute_workerThrows_returnsFailed() {
+        Worker worker = Worker.builder()
+            .name("throws")
+            .capabilityName("boom")
+            .function(new WorkerFunction.Sync(input -> { throw new IllegalStateException("bad state"); }))
+            .build();
+
+        WorkerResult result = executor.execute(worker, Map.of());
+        assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
+        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("bad state");
+    }
+
+    @Test
+    void execute_timeout_returnsExpired() {
+        Worker worker = Worker.builder()
+            .name("slow")
+            .capabilityName("crawl")
+            .function(new WorkerFunction.Sync(input -> {
+                try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                return WorkerResult.of(Map.of());
+            }))
+            .executionPolicy(new ExecutionPolicy(50, new RetryPolicy(1, 0)))
+            .build();
+
+        WorkerResult result = executor.execute(worker, Map.of());
+        assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Expired.class);
+        assertThat(((WorkerOutcome.Expired) result.outcome()).reason()).contains("timed out");
+    }
+
+    @Test
+    void execute_workerThrowsNullMessage_returnsFailedWithClassName() {
+        Worker worker = Worker.builder()
+            .name("npe")
+            .capabilityName("null")
+            .function(new WorkerFunction.Sync(input -> { throw new NullPointerException(); }))
+            .build();
+
+        WorkerResult result = executor.execute(worker, Map.of());
+        assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
+        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("java.lang.NullPointerException");
     }
 }
