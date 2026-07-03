@@ -3,7 +3,9 @@ package io.casehub.worker.runtime;
 import io.casehub.platform.governance.PolicyEnforcer;
 import io.casehub.platform.governance.TimeoutPolicyException;
 import io.casehub.platform.governance.InterruptedPolicyException;
+import io.casehub.worker.api.Capability;
 import io.casehub.worker.api.Worker;
+import io.casehub.worker.api.WorkerFunction;
 import io.casehub.worker.api.WorkerResult;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
@@ -15,6 +17,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import java.util.Map;
+import java.util.Objects;
 
 @ApplicationScoped
 public class DefaultWorkerExecutor implements WorkerExecutor {
@@ -29,15 +32,28 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
     }
 
     @Override
-    public WorkerResult execute(Worker worker, Map<String, Object> input) {
+    public WorkerResult execute(Worker worker, Capability capability, Map<String, Object> input) {
+        Objects.requireNonNull(capability, "capability");
+        if (!worker.capabilityNames().contains(capability.name())) {
+            throw new IllegalArgumentException(
+                "Capability '" + capability.name() + "' not in worker '"
+                    + worker.name() + "' capabilities: " + worker.capabilityNames());
+        }
+        if (!(worker.function() instanceof WorkerFunction.Sync sync)) {
+            throw new UnsupportedOperationException(
+                "DefaultWorkerExecutor supports Sync functions only, got: "
+                    + worker.function().getClass().getName());
+        }
+
         Span span = GlobalOpenTelemetry.getTracer(INSTRUMENTATION_NAME)
             .spanBuilder("worker.execute")
             .setAttribute(AttributeKey.stringKey("worker.name"), worker.name())
+            .setAttribute(AttributeKey.stringKey("worker.capability"), capability.name())
             .startSpan();
         try (Scope ignored = span.makeCurrent()) {
             WorkerResult result = policyEnforcer.execute(
                 worker.executionPolicy(),
-                () -> ((io.casehub.worker.api.WorkerFunction.Sync) worker.function()).fn().apply(input));
+                () -> sync.fn().apply(input));
             span.setAttribute(AttributeKey.stringKey("worker.outcome"),
                 result.outcome().getClass().getSimpleName());
             return result;
