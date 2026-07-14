@@ -8,7 +8,6 @@ import io.casehub.worker.runtime.WorkerExecutor;
 import io.quarkus.arc.DefaultBean;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -22,7 +21,7 @@ public class MockWorkerExecutor implements WorkerExecutor {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    public WorkerResult execute(Worker worker, Capability capability, Map<String, Object> input) {
+    public WorkerResult execute(Worker worker, Capability capability, Object input) {
         Objects.requireNonNull(capability, "capability");
         if (!worker.capabilityNames().contains(capability.name())) {
             throw new IllegalArgumentException(
@@ -37,8 +36,13 @@ public class MockWorkerExecutor implements WorkerExecutor {
                     "MockWorkerExecutor supports Sync functions only, got: "
                     + worker.function().getClass().getName());
         }
+        if (!sync.inputType().isInstance(input)) {
+            throw new IllegalArgumentException(
+                    "Input type mismatch: expected " + sync.inputType().getName()
+                    + ", got " + (input == null ? "null" : input.getClass().getName()));
+        }
         try {
-            return ((java.util.function.Function<Map<String, Object>, WorkerResult>) sync.fn()).apply(input);
+            return (WorkerResult) ((java.util.function.Function) sync.fn()).apply(input);
         } catch (Exception e) {
             String message = e.getMessage();
             if (message == null) {message = e.getClass().getName();}

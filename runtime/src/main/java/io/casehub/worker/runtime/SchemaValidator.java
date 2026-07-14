@@ -9,7 +9,6 @@ import com.networknt.schema.ValidationMessage;
 import io.casehub.worker.api.Capability;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,23 +29,23 @@ public class SchemaValidator {
         cache.computeIfAbsent(schema, this::parseSchema);
     }
 
-    public Optional<String> validateInput(Capability capability, Map<String, Object> input) {
+    public Optional<String> validateInput(Capability capability, Object input) {
         return validate(capability.inputSchema(), input);
     }
 
-    public Optional<String> validateOutput(Capability capability, Map<String, Object> output) {
+    public Optional<String> validateOutput(Capability capability, Object output) {
         return validate(capability.outputSchema(), output);
     }
 
-    private Optional<String> validate(String schemaString, Map<String, Object> data) {
-        if (EMPTY_SCHEMA.equals(schemaString)) return Optional.empty();
-        JsonSchema schema = cache.computeIfAbsent(schemaString, this::parseSchema);
-        JsonNode node = objectMapper.valueToTree(data);
+    private Optional<String> validate(String schemaString, Object data) {
+        if (EMPTY_SCHEMA.equals(schemaString)) {return Optional.empty();}
+        JsonSchema             schema = cache.computeIfAbsent(schemaString, this::parseSchema);
+        JsonNode               node   = objectMapper.valueToTree(data);
         Set<ValidationMessage> errors = schema.validate(node);
-        if (errors.isEmpty()) return Optional.empty();
+        if (errors.isEmpty()) {return Optional.empty();}
         String message = errors.stream()
-            .map(ValidationMessage::getMessage)
-            .collect(Collectors.joining("\n"));
+                               .map(ValidationMessage::getMessage)
+                               .collect(Collectors.joining("\n"));
         return Optional.of(message);
     }
 

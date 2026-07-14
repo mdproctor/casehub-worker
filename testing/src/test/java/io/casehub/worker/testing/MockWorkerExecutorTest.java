@@ -1,9 +1,9 @@
 package io.casehub.worker.testing;
 
 import io.casehub.worker.api.Capability;
+import io.casehub.worker.api.Worker;
 import io.casehub.worker.api.WorkerOutcome;
 import io.casehub.worker.api.WorkerResult;
-import io.casehub.worker.api.Worker;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -12,6 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class MockWorkerExecutorTest {
+    record TestPojo(String name, int age) {}
+
 
     private static Capability cap(String name) {
         return Capability.of(name, "{}", "{}");
@@ -113,4 +115,31 @@ class MockWorkerExecutorTest {
             .isInstanceOf(UnsupportedOperationException.class)
             .hasMessageContaining("Sync");
     }
+
+    @Test
+    void execute_typedPojoInput_passedToFunction() {
+        MockWorkerExecutor executor = new MockWorkerExecutor();
+        Worker worker = Worker.builder()
+                              .name("typed").capabilityName("process")
+                              .<TestPojo>fn().apply(pojo -> WorkerResult.of(Map.of("greeting", "hello " + pojo.name())))
+                              .build();
+
+        WorkerResult result = executor.execute(worker, cap("process"), new TestPojo("alice", 30));
+        assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
+        assertThat(result.output()).containsEntry("greeting", "hello alice");
+    }
+
+    @Test
+    void execute_inputTypeMismatch_throwsIAE() {
+        MockWorkerExecutor executor = new MockWorkerExecutor();
+        Worker worker = Worker.builder()
+                              .name("typed").capabilityName("process")
+                              .<TestPojo>fn().apply(pojo -> WorkerResult.of(Map.of()))
+                              .build();
+
+        assertThatThrownBy(() -> executor.execute(worker, cap("process"), Map.of("name", "alice")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("TestPojo");
+    }
+
 }

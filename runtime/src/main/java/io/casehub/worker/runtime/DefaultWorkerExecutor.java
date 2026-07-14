@@ -17,7 +17,6 @@ import io.opentelemetry.context.Scope;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -39,7 +38,7 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    public WorkerResult execute(Worker worker, Capability capability, Map<String, Object> input) {
+    public WorkerResult execute(Worker worker, Capability capability, Object input) {
         Objects.requireNonNull(capability, "capability");
         if (!worker.capabilityNames().contains(capability.name())) {
             throw new IllegalArgumentException(
@@ -50,6 +49,11 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
             throw new UnsupportedOperationException(
                     "DefaultWorkerExecutor supports Sync functions only, got: "
                     + worker.function().getClass().getName());
+        }
+        if (!sync.inputType().isInstance(input)) {
+            throw new IllegalArgumentException(
+                    "Input type mismatch: expected " + sync.inputType().getName()
+                    + ", got " + (input == null ? "null" : input.getClass().getName()));
         }
 
         schemaValidator.ensureSchemaParsed(capability.inputSchema());
@@ -73,7 +77,7 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
 
             WorkerResult result = policyEnforcer.execute(
                     worker.executionPolicy(),
-                    () -> ((java.util.function.Function<Map<String, Object>, WorkerResult>) sync.fn()).apply(input));
+                    () -> (WorkerResult) ((java.util.function.Function) sync.fn()).apply(input));
 
             if (result.outcome() instanceof WorkerOutcome.Success) {
                 Optional<String> outputError = schemaValidator.validateOutput(capability, result.output());
@@ -102,9 +106,9 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
         } catch (Exception e) {
             span.setStatus(StatusCode.ERROR, e.getMessage());
             span.recordException(e);
-            Throwable root = e.getCause() != null ? e.getCause() : e;
-            String message = root.getMessage();
-            if (message == null) message = root.getClass().getName();
+            Throwable root    = e.getCause() != null ? e.getCause() : e;
+            String    message = root.getMessage();
+            if (message == null) {message = root.getClass().getName();}
             WorkerResult result = WorkerResult.failed(message);
             span.setAttribute(AttributeKey.stringKey("worker.outcome"),
                               result.outcome().getClass().getSimpleName());

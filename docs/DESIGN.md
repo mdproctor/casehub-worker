@@ -33,7 +33,20 @@ _To be documented._
 
 ## Execution Contract
 
-`WorkerExecutor.execute()` always returns a `WorkerResult` for worker-level conditions. Only infrastructure signals (thread interrupt, JVM errors) propagate as exceptions.
+`WorkerExecutor.execute()` always returns a `WorkerResult` for worker-level conditions. Programming errors propagate as exceptions. Infrastructure signals (thread interrupt, JVM errors) propagate as exceptions.
+
+### Programming errors
+
+| Error | Exception | When |
+|-------|-----------|------|
+| Null capability | `NullPointerException` | `capability` is null |
+| Capability not in worker | `IllegalArgumentException` | `capability.name()` not in `worker.capabilityNames()` |
+| Non-Sync function | `UnsupportedOperationException` | `worker.function()` is not `WorkerFunction.Sync` |
+| Input type mismatch | `IllegalArgumentException` | `input` is not an instance of `WorkerFunction.inputType()` |
+| Null input | `IllegalArgumentException` | `input` is null (subcase of type mismatch — `isInstance(null)` is false) |
+| Malformed schema | `IllegalArgumentException` | `Capability.inputSchema()` or `outputSchema()` is not valid JSON Schema |
+
+### Worker-level outcomes
 
 | Exception source | WorkerOutcome |
 |-----------------|---------------|
