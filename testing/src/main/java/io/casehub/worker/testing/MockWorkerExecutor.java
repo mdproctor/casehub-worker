@@ -41,26 +41,13 @@ public class MockWorkerExecutor implements WorkerExecutor {
             }
             return Uni.createFrom().item(() -> {
                 try {
-                    return (WorkerResult) ((java.util.function.Function) sync.fn()).apply(input);
+                    return (WorkerResult) ((java.util.function.BiFunction) sync.fn()).apply(input, null);
                 } catch (Exception e) {
                     String message = e.getMessage();
                     if (message == null) {message = e.getClass().getName();}
                     return WorkerResult.failed(message);
                 }
             });
-        } else if (worker.function() instanceof WorkerFunction.Async async) {
-            if (!async.inputType().isInstance(input)) {
-                throw new IllegalArgumentException(
-                        "Input type mismatch: expected " + async.inputType().getName()
-                        + ", got " + (input == null ? "null" : input.getClass().getName()));
-            }
-            return Uni.createFrom().completionStage(
-                              () -> (java.util.concurrent.CompletionStage<WorkerResult>) ((java.util.function.Function) async.fn()).apply(input))
-                      .onFailure().recoverWithItem(e -> {
-                        String message = e.getMessage();
-                        if (message == null) {message = e.getClass().getName();}
-                        return WorkerResult.failed(message);
-                    });
         } else {
             throw new UnsupportedOperationException(
                     "MockWorkerExecutor supports Sync and Async functions only, got: "

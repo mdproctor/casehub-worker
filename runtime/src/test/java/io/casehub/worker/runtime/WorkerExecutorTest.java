@@ -49,12 +49,12 @@ class WorkerExecutorTest {
     void execute_successfulWorker() {
         Worker worker = Worker.builder()
                               .name("greet").capabilityName("greet")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> WorkerResult.of(Map.of("greeting", "hello " + input.get("name")))))
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> WorkerResult.of(Map.of("greeting", "hello " + input.get("name")))))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("greet"), Map.of("name", "world")).await().indefinitely();
+        var result = executor.execute(worker, cap("greet"), Map.of("name", "world")).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
-        assertThat(result.output()).containsEntry("greeting", "hello world");
+        assertThat((Map<String, Object>) result.output()).containsEntry("greeting", "hello world");
     }
 
     @Test
@@ -62,7 +62,7 @@ class WorkerExecutorTest {
         AtomicInteger attempts = new AtomicInteger(0);
         Worker worker = Worker.builder()
                               .name("flaky").capabilityName("process")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> {
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> {
                                   if (attempts.incrementAndGet() < 3) {
                                       throw new RuntimeException("transient");
                                   }
@@ -71,7 +71,7 @@ class WorkerExecutorTest {
                               .executionPolicy(new ExecutionPolicy(null, new RetryPolicy(3, 10)))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("process"), Map.of()).await().indefinitely();
+        var result = executor.execute(worker, cap("process"), Map.of()).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
         assertThat(attempts.get()).isEqualTo(3);
     }
@@ -80,36 +80,36 @@ class WorkerExecutorTest {
     void execute_exhaustsRetries_returnsFailed() {
         Worker worker = Worker.builder()
                               .name("broken").capabilityName("fail")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> {
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> {
                                   throw new RuntimeException("permanent");
                               }))
                               .executionPolicy(new ExecutionPolicy(null, new RetryPolicy(2, 10)))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("fail"), Map.of()).await().indefinitely();
+        var result = executor.execute(worker, cap("fail"), Map.of()).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("permanent");
+        assertThat(((WorkerOutcome.Failed<?>) result.outcome()).reason()).isEqualTo("permanent");
     }
 
     @Test
     void execute_workerThrows_returnsFailed() {
         Worker worker = Worker.builder()
                               .name("throws").capabilityName("boom")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> {
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> {
                                   throw new IllegalStateException("bad state");
                               }))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("boom"), Map.of()).await().indefinitely();
+        var result = executor.execute(worker, cap("boom"), Map.of()).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("bad state");
+        assertThat(((WorkerOutcome.Failed<?>) result.outcome()).reason()).isEqualTo("bad state");
     }
 
     @Test
     void execute_timeout_returnsExpired() {
         Worker worker = Worker.builder()
                               .name("slow").capabilityName("crawl")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> {
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> {
                                   try {Thread.sleep(500);} catch (InterruptedException e) {
                                       Thread.currentThread().interrupt();
                                   }
@@ -118,7 +118,7 @@ class WorkerExecutorTest {
                               .executionPolicy(new ExecutionPolicy(50, new RetryPolicy(1, 0)))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("crawl"), Map.of()).await().indefinitely();
+        var result = executor.execute(worker, cap("crawl"), Map.of()).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Expired.class);
         assertThat(((WorkerOutcome.Expired) result.outcome()).reason()).contains("timed out");
     }
@@ -127,21 +127,21 @@ class WorkerExecutorTest {
     void execute_workerThrowsNullMessage_returnsFailedWithClassName() {
         Worker worker = Worker.builder()
                               .name("npe").capabilityName("null")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> {
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> {
                                   throw new NullPointerException();
                               }))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("null"), Map.of()).await().indefinitely();
+        var result = executor.execute(worker, cap("null"), Map.of()).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("java.lang.NullPointerException");
+        assertThat(((WorkerOutcome.Failed<?>) result.outcome()).reason()).isEqualTo("java.lang.NullPointerException");
     }
 
     @Test
     void execute_nullCapability_throwsNPE() {
         Worker worker = Worker.builder()
                               .name("w").capabilityName("c")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> WorkerResult.of(Map.of())))
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> WorkerResult.of(Map.of())))
                               .build();
 
         assertThatThrownBy(() -> executor.execute(worker, null, Map.of()))
@@ -155,7 +155,7 @@ class WorkerExecutorTest {
     void execute_capabilityNotInWorker_throwsIAE() {
         Worker worker = Worker.builder()
                               .name("w").capabilityName("supported")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> WorkerResult.of(Map.of())))
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> WorkerResult.of(Map.of())))
                               .build();
 
         assertThatThrownBy(() -> executor.execute(worker, cap("unsupported"), Map.of()))
@@ -172,8 +172,8 @@ class WorkerExecutorTest {
                               .build();
 
         assertThatThrownBy(() -> executor.execute(worker, cap("ext"), Map.of()))
-                .isInstanceOf(UnsupportedOperationException.class)
-                .hasMessageContaining("Sync");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Input type mismatch");
     }
 
     @Test
@@ -181,18 +181,18 @@ class WorkerExecutorTest {
         AtomicInteger callCount = new AtomicInteger(0);
         Worker worker = Worker.builder()
                               .name("strict").capabilityName("validate")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> {
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> {
                                   callCount.incrementAndGet();
                                   return WorkerResult.of(Map.of());
                               }))
                               .build();
 
-        WorkerResult result = executor.execute(worker,
+        var result = executor.execute(worker,
                                                cap("validate", REQUIRE_NAME_SCHEMA, "{}"),
                                                Map.of("age", 30)).await().indefinitely();
 
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).contains("name");
+        assertThat(((WorkerOutcome.Failed<?>) result.outcome()).reason()).contains("name");
         assertThat(callCount.get()).isZero();
     }
 
@@ -202,23 +202,23 @@ class WorkerExecutorTest {
     void execute_validInput_invalidOutput_returnsSuccessWithWarning() {
         Worker worker = Worker.builder()
                               .name("bad-output").capabilityName("compute")
-                              .function(new WorkerFunction.Sync<>(Map.class, input ->
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) ->
                                                                                      WorkerResult.of(Map.of("result", "not-a-number"))))
                               .build();
 
-        WorkerResult result = executor.execute(worker,
+        var result = executor.execute(worker,
                                                cap("compute", "{}", REQUIRE_RESULT_SCHEMA),
                                                Map.of()).await().indefinitely();
 
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
-        assertThat(result.output()).containsEntry("result", "not-a-number");
+        assertThat((Map<String, Object>) result.output()).containsEntry("result", "not-a-number");
     }
 
     @Test
     void execute_malformedSchema_throwsIAE() {
         Worker worker = Worker.builder()
                               .name("broken").capabilityName("bad")
-                              .function(new WorkerFunction.Sync<>(Map.class, input -> WorkerResult.of(Map.of())))
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) -> WorkerResult.of(Map.of())))
                               .build();
 
         assertThatThrownBy(() -> executor.execute(worker,
@@ -230,43 +230,43 @@ class WorkerExecutorTest {
     void execute_declinedWithPartialOutput_noOutputValidation() {
         Worker worker = Worker.builder()
                               .name("decliner").capabilityName("dec")
-                              .function(new WorkerFunction.Sync<>(Map.class, input ->
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) ->
                                                                                      WorkerResult.declined("nope", Map.of("partial", "data"))))
                               .build();
 
-        WorkerResult result = executor.execute(worker,
+        var result = executor.execute(worker,
                                                cap("dec", "{}", REQUIRE_RESULT_SCHEMA),
                                                Map.of()).await().indefinitely();
 
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Declined.class);
-        assertThat(result.output()).containsEntry("partial", "data");
+        assertThat((Map<String, Object>) result.output()).containsEntry("partial", "data");
     }
 
     @Test
     void execute_failedWithPartialOutput_noOutputValidation() {
         Worker worker = Worker.builder()
                               .name("failer").capabilityName("fail")
-                              .function(new WorkerFunction.Sync<>(Map.class, input ->
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) ->
                                                                                      WorkerResult.failed("error", Map.of("partial", "data"))))
                               .build();
 
-        WorkerResult result = executor.execute(worker,
+        var result = executor.execute(worker,
                                                cap("fail", "{}", REQUIRE_RESULT_SCHEMA),
                                                Map.of()).await().indefinitely();
 
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(result.output()).containsEntry("partial", "data");
+        assertThat((Map<String, Object>) result.output()).containsEntry("partial", "data");
     }
 
     @Test
     void execute_emptySchemas_noValidation() {
         Worker worker = Worker.builder()
                               .name("legacy").capabilityName("old")
-                              .function(new WorkerFunction.Sync<>(Map.class, input ->
+                              .function(new WorkerFunction.Sync<>(Map.class, Map.class, (input, scope) ->
                                                                                      WorkerResult.of(Map.of("anything", "goes"))))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("old"), Map.of("random", 42)).await().indefinitely();
+        var result = executor.execute(worker, cap("old"), Map.of("random", 42)).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
     }
 
@@ -290,9 +290,9 @@ class WorkerExecutorTest {
                               .<TestPojo>fn().apply(pojo -> WorkerResult.of(Map.of("greeting", "hello " + pojo.name())))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("process"), new TestPojo("alice", 30)).await().indefinitely();
+        var result = executor.execute(worker, cap("process"), new TestPojo("alice", 30)).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
-        assertThat(result.output()).containsEntry("greeting", "hello alice");
+        assertThat((Map<String, Object>) result.output()).containsEntry("greeting", "hello alice");
     }
 
     @Test
@@ -321,66 +321,64 @@ class WorkerExecutorTest {
     }
 
     @Test
-    void execute_asyncWorker_completesSuccessfully() {
+    void execute_syncWorker_completesSuccessfully() {
         Worker worker = Worker.builder()
-                              .name("async").capabilityName("fetch")
-                              .asyncFunction(input -> CompletableFuture.completedFuture(
-                                      WorkerResult.of(Map.of("fetched", true))))
+                              .name("sync").capabilityName("fetch")
+                              .function(input -> WorkerResult.of(Map.of("fetched", true)))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("fetch"), Map.of())
+        var result = executor.execute(worker, cap("fetch"), Map.of())
                                       .await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
-        assertThat(result.output()).containsEntry("fetched", true);
+        assertThat((Map<String, Object>) result.output()).containsEntry("fetched", true);
     }
 
     @Test
-    void execute_asyncWorker_exceptionInStage_returnsFailed() {
+    void execute_syncWorker_exceptionInFn_returnsFailed() {
         Worker worker = Worker.builder()
-                              .name("failing-async").capabilityName("fail")
-                              .asyncFunction(input -> CompletableFuture.failedFuture(
-                                      new RuntimeException("async boom")))
+                              .name("failing").capabilityName("fail")
+                              .function(input -> { throw new RuntimeException("sync boom"); })
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("fail"), Map.of())
+        var result = executor.execute(worker, cap("fail"), Map.of())
                                       .await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("async boom");
+        assertThat(((WorkerOutcome.Failed<?>) result.outcome()).reason()).isEqualTo("sync boom");
     }
 
     @Test
-    void execute_asyncWorker_throwsDuringDispatch_returnsFailed() {
+    void execute_syncWorker_throwsDuringDispatch_returnsFailed() {
         Worker worker = Worker.builder()
                               .name("dispatch-fail").capabilityName("boom")
-                              .asyncFunction(input -> {throw new IllegalStateException("dispatch error");})
+                              .function(input -> {throw new IllegalStateException("dispatch error");})
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("boom"), Map.of())
+        var result = executor.execute(worker, cap("boom"), Map.of())
                                       .await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).isEqualTo("dispatch error");
+        assertThat(((WorkerOutcome.Failed<?>) result.outcome()).reason()).isEqualTo("dispatch error");
     }
 
     @Test
-    void execute_asyncTypedWorker_passesTypedInput() {
+    void execute_typedWorker_passesTypedInput() {
         Worker worker = Worker.builder()
-                              .name("typed-async").capabilityName("process")
-                              .<TestPojo>fn().applyAsync(pojo -> CompletableFuture.completedFuture(
-                        WorkerResult.of(Map.of("greeting", "hello " + pojo.name()))))
+                              .name("typed").capabilityName("process")
+                              .<TestPojo>fn()
+                              .apply(pojo -> WorkerResult.of(Map.of("greeting", "hello " + pojo.name())))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("process"),
-                                               new TestPojo("alice", 30)).await().indefinitely();
+        var result = executor.execute(worker, cap("process"),
+                                      new TestPojo("alice", 30)).await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
-        assertThat(result.output()).containsEntry("greeting", "hello alice");
+        assertThat((Map<String, Object>) result.output()).containsEntry("greeting", "hello alice");
     }
 
     @Test
-    void execute_asyncWorker_inputTypeMismatch_throwsIAE() {
+    void execute_typedWorker_inputTypeMismatch_throwsIAE() {
         Worker worker = Worker.builder()
-                              .name("typed-async").capabilityName("process")
-                              .<TestPojo>fn().applyAsync(pojo -> CompletableFuture.completedFuture(
-                        WorkerResult.of(Map.of())))
+                              .name("typed").capabilityName("process")
+                              .<TestPojo>fn()
+                              .apply(pojo -> WorkerResult.of(Map.of()))
                               .build();
 
         assertThatThrownBy(() -> executor.execute(worker, cap("process"), Map.of("name", "alice")))
@@ -393,18 +391,18 @@ class WorkerExecutorTest {
         AtomicInteger callCount = new AtomicInteger(0);
         Worker worker = Worker.builder()
                               .name("strict-async").capabilityName("validate")
-                              .asyncFunction(input -> {
+                              .function(input -> {
                                   callCount.incrementAndGet();
-                                  return CompletableFuture.completedFuture(WorkerResult.of(Map.of()));
+                                  return WorkerResult.of(Map.of());
                               })
                               .build();
 
-        WorkerResult result = executor.execute(worker,
+        var result = executor.execute(worker,
                                                cap("validate", REQUIRE_NAME_SCHEMA, "{}"),
                                                Map.of("age", 30)).await().indefinitely();
 
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
-        assertThat(((WorkerOutcome.Failed) result.outcome()).reason()).contains("name");
+        assertThat(((WorkerOutcome.Failed<?>) result.outcome()).reason()).contains("name");
         assertThat(callCount.get()).isZero();
     }
 

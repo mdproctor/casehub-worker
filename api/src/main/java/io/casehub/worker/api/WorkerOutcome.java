@@ -1,15 +1,18 @@
 package io.casehub.worker.api;
 
-import java.util.Objects;
+public sealed interface WorkerOutcome<R> {
+    static <R> WorkerOutcome<R> success() {return new Success<>(null);}
 
-public sealed interface WorkerOutcome {
-    static WorkerOutcome success() { return new Success(null); }
-    static WorkerOutcome success(PlannedAction action) {
-        Objects.requireNonNull(action);
-        return new Success(action);
+    static <R> WorkerOutcome<R> success(PlannedAction action) {
+        java.util.Objects.requireNonNull(action);
+        return new Success<>(action);
     }
-    record Success(PlannedAction plannedAction) implements WorkerOutcome {}
-    record Declined(String reason) implements WorkerOutcome {}
-    record Failed(String reason) implements WorkerOutcome {}
-    record Expired(String reason) implements WorkerOutcome {}
+
+    record Success<R>(PlannedAction plannedAction) implements WorkerOutcome<R> {}
+
+    record Declined<R>(String reason) implements WorkerOutcome<R> {}
+
+    record Failed<R>(String reason) implements WorkerOutcome<R> {}
+
+    record Expired<R>(String reason) implements WorkerOutcome<R> {}
 }

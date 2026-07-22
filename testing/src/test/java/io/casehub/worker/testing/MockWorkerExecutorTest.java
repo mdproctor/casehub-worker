@@ -127,10 +127,10 @@ class MockWorkerExecutorTest {
                               .<TestPojo>fn().apply(pojo -> WorkerResult.of(Map.of("greeting", "hello " + pojo.name())))
                               .build();
 
-        WorkerResult result = executor.execute(worker, cap("process"), new TestPojo("alice", 30))
-                                      .await().indefinitely();
+        var result = executor.execute(worker, cap("process"), new TestPojo("alice", 30))
+                             .await().indefinitely();
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
-        assertThat(result.output()).containsEntry("greeting", "hello alice");
+        assertThat((Map<String, Object>) result.output()).containsEntry("greeting", "hello alice");
     }
 
     @Test

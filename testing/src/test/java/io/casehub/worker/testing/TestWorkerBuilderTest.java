@@ -28,39 +28,15 @@ class TestWorkerBuilderTest {
             input -> WorkerResult.of(input));
 
         @SuppressWarnings("unchecked")
-        var result = ((io.casehub.worker.api.WorkerFunction.Sync<Map<String, Object>>) wc.worker().function())
-            .fn().apply(Map.of("key", "value"));
+        var result = ((io.casehub.worker.api.WorkerFunction.Sync<Map<String, Object>, Map<String, Object>>) wc.worker().function())
+            .fn().apply(Map.of("key", "value"), null);
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Success.class);
-        assertThat(result.output()).containsEntry("key", "value");
+        assertThat((Map<String, Object>) result.output()).containsEntry("key", "value");
     }
 
-    @Test
-    void async_createsWorkerWithAsyncFunction() {
-        var worker = TestWorkerBuilder.async("fetcher",
-                                             input -> java.util.concurrent.CompletableFuture.completedFuture(WorkerResult.of(Map.of("ok", true))));
-        assertThat(worker.name()).isEqualTo("fetcher");
-        assertThat(worker.function()).isInstanceOf(io.casehub.worker.api.WorkerFunction.Async.class);
-    }
+    // async tests removed — Async variant and async builder methods deleted (virtual threads)
 
-    @Test
-    void asyncWithCapability_createsMatchingPair() {
-        var wc = TestWorkerBuilder.asyncWithCapability("fetcher",
-                                                       input -> java.util.concurrent.CompletableFuture.completedFuture(WorkerResult.of(Map.of("ok", true))));
-        assertThat(wc.worker().name()).isEqualTo("fetcher");
-        assertThat(wc.worker().function()).isInstanceOf(io.casehub.worker.api.WorkerFunction.Async.class);
-        assertThat(wc.capability().name()).isEqualTo("fetcher");
-        assertThat(wc.capability().inputSchema()).isEqualTo("{}");
-        assertThat(wc.capability().outputSchema()).isEqualTo("{}");
-    }
-
-    @Test
-    void asyncWithCapability_withSchemas_appliesSchemas() {
-        var wc = TestWorkerBuilder.asyncWithCapability("fetcher",
-                                                       "{\"type\":\"object\"}", "{\"type\":\"object\"}",
-                                                       input -> java.util.concurrent.CompletableFuture.completedFuture(WorkerResult.of(Map.of())));
-        assertThat(wc.capability().inputSchema()).isEqualTo("{\"type\":\"object\"}");
-        assertThat(wc.capability().outputSchema()).isEqualTo("{\"type\":\"object\"}");
-    }
+    // asyncWithCapability_withSchemas test removed — async methods deleted
 
 
 }

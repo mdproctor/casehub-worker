@@ -12,7 +12,7 @@ public final class TestWorkerBuilder {
 
     public record WorkerWithCapability(Worker worker, Capability capability) {}
 
-    public static Worker sync(String name, Function<Map<String, Object>, WorkerResult> fn) {
+    public static Worker sync(String name, Function<Map<String, Object>, WorkerResult<Map<String, Object>>> fn) {
         return Worker.builder()
             .name(name)
             .capabilityName(name)
@@ -21,7 +21,7 @@ public final class TestWorkerBuilder {
     }
 
     public static WorkerWithCapability syncWithCapability(String name,
-            Function<Map<String, Object>, WorkerResult> fn) {
+            Function<Map<String, Object>, WorkerResult<Map<String, Object>>> fn) {
         Worker worker = Worker.builder()
             .name(name)
             .capabilityName(name)
@@ -33,7 +33,7 @@ public final class TestWorkerBuilder {
 
     public static WorkerWithCapability syncWithCapability(String name,
             String inputSchema, String outputSchema,
-            Function<Map<String, Object>, WorkerResult> fn) {
+            Function<Map<String, Object>, WorkerResult<Map<String, Object>>> fn) {
         Worker worker = Worker.builder()
             .name(name)
             .capabilityName(name)
@@ -43,34 +43,9 @@ public final class TestWorkerBuilder {
         return new WorkerWithCapability(worker, capability);
     }
 
-    public static Worker async(String name,
-                               Function<Map<String, Object>, java.util.concurrent.CompletionStage<WorkerResult>> fn) {
-        return Worker.builder()
-                     .name(name).capabilityName(name)
-                     .asyncFunction(fn)
-                     .build();
-    }
+    // async methods removed — virtual threads supersede CompletionStage workers
 
-    public static WorkerWithCapability asyncWithCapability(String name,
-                                                           Function<Map<String, Object>, java.util.concurrent.CompletionStage<WorkerResult>> fn) {
-        Worker worker = Worker.builder()
-                              .name(name).capabilityName(name)
-                              .asyncFunction(fn)
-                              .build();
-        Capability capability = Capability.of(name, "{}", "{}");
-        return new WorkerWithCapability(worker, capability);
-    }
-
-    public static WorkerWithCapability asyncWithCapability(String name,
-                                                           String inputSchema, String outputSchema,
-                                                           Function<Map<String, Object>, java.util.concurrent.CompletionStage<WorkerResult>> fn) {
-        Worker worker = Worker.builder()
-                              .name(name).capabilityName(name)
-                              .asyncFunction(fn)
-                              .build();
-        Capability capability = Capability.of(name, inputSchema, outputSchema);
-        return new WorkerWithCapability(worker, capability);
-    }
+    // asyncWithCapability(String, String, String, Function) removed — virtual threads supersede CompletionStage
 
 
 }

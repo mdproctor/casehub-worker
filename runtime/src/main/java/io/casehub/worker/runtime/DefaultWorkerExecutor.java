@@ -52,17 +52,8 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
                     + worker.name() + "' capabilities: " + worker.capabilityNames());
         }
 
-        WorkerFunction<?> fn = worker.function();
-        Class<?>          inputType;
-        if (fn instanceof WorkerFunction.Sync<?> sync) {
-            inputType = sync.inputType();
-        } else if (fn instanceof WorkerFunction.Async<?> async) {
-            inputType = async.inputType();
-        } else {
-            throw new UnsupportedOperationException(
-                    "DefaultWorkerExecutor supports Sync and Async functions only, got: "
-                    + fn.getClass().getName());
-        }
+        WorkerFunction<?, ?> fn = worker.function();
+        Class<?>             inputType = fn.inputType();
         if (!inputType.isInstance(input)) {
             throw new IllegalArgumentException(
                     "Input type mismatch: expected " + inputType.getName()
@@ -145,10 +136,7 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
     private Uni<WorkerResult> liftToUni(Worker worker, Object input) {
         if (worker.function() instanceof WorkerFunction.Sync sync) {
             return Uni.createFrom().item(() ->
-                                                 (WorkerResult) ((Function) sync.fn()).apply(input));
-        } else if (worker.function() instanceof WorkerFunction.Async async) {
-            return Uni.createFrom().completionStage(() ->
-                                                            (CompletionStage<WorkerResult>) ((Function) async.fn()).apply(input));
+                                                 (WorkerResult) ((java.util.function.BiFunction) sync.fn()).apply(input, null));
         }
         throw new UnsupportedOperationException(
                 "Unsupported function type: " + worker.function().getClass().getName());

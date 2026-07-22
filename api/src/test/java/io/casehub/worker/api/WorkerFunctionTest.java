@@ -5,151 +5,141 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkerFunctionTest {
 
-  @SuppressWarnings("unchecked")
-  @Test
-  void sync_is_workerFunction() {
-    WorkerFunction<?> fn = new WorkerFunction.Sync<>(Map.class, input -> WorkerResult.of(Map.of()));
-    assertThat(fn).isInstanceOf(WorkerFunction.class);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
-  void sync_fn_accessor_returns_function() {
-    var          sync   = new WorkerFunction.Sync<>(Map.class, (Map input) -> WorkerResult.of(Map.of("key", "value")));
-    WorkerResult result = sync.fn().apply(Map.of());
-    assertThat(result.output()).containsEntry("key", "value");
-  }
-
-    @Test
-    void workerFunction_declares_inputType_method() throws Exception {
-        assertThat(WorkerFunction.class.getDeclaredMethods())
-                .extracting("name")
-                .containsExactly("inputType");
-    }
-
-  @Test
-  void typedSyncCarriesInputType() {
-    var fn = new WorkerFunction.Sync<>(String.class, s -> WorkerResult.of(Map.of("len", s.length())));
-    assertThat(fn.inputType()).isEqualTo(String.class);
-  }
-
-  @Test
-  void untypedSyncDefaultsToMapClass() {
-    var fn = new WorkerFunction.Sync<>(Map.class, input -> WorkerResult.of(Map.of()));
-    assertThat(fn.inputType()).isEqualTo(Map.class);
-  }
-
-  @Test
-  void noneHasVoidInputType() {
-    assertThat(WorkerFunction.NONE.inputType()).isEqualTo(Void.class);
-  }
-
-  @Test
-  void syncRejectsNullInputType() {
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-               () -> new WorkerFunction.Sync<>(null, input -> WorkerResult.of(Map.of())))
-                                   .isInstanceOf(NullPointerException.class);
-  }
-
-  @Test
-  void syncRejectsNullFunction() {
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-               () -> new WorkerFunction.Sync<>(String.class, null))
-                                   .isInstanceOf(NullPointerException.class);
-  }
-
-
-  @Test
-  void none_is_workerFunction() {
-    assertThat(WorkerFunction.NONE).isInstanceOf(WorkerFunction.class);
-  }
-
-  @Test
-  void none_is_not_sync() {
-    assertThat(WorkerFunction.NONE).isNotInstanceOf(WorkerFunction.Sync.class);
-  }
-
-  @Test
-  void none_singleton_equals_new_instance() {
-    assertThat(WorkerFunction.NONE).isEqualTo(new WorkerFunction.None());
-  }
-
-  @Test
-  void none_is_same_reference_across_accesses() {
-    assertThat(WorkerFunction.NONE).isSameAs(WorkerFunction.NONE);
-  }
-
     @SuppressWarnings("unchecked")
     @Test
-    void async_is_workerFunction() {
-        WorkerFunction<?> fn = new WorkerFunction.Async<>(Map.class,
-                                                          input -> java.util.concurrent.CompletableFuture.completedFuture(WorkerResult.of(Map.of())));
+    void sync_is_workerFunction() {
+        WorkerFunction<?, ?> fn = new WorkerFunction.Sync<>(
+                Map.class, Map.class, (input, scope) -> WorkerResult.of(Map.of()));
         assertThat(fn).isInstanceOf(WorkerFunction.class);
     }
 
-  @SuppressWarnings("unchecked")
-  @Test
-  void async_fn_accessor_returns_function() {
-    var async = new WorkerFunction.Async<>(Map.class,
-                                           (Map input) -> java.util.concurrent.CompletableFuture.completedFuture(
-                                                   WorkerResult.of(Map.of("key", "value"))));
-    java.util.concurrent.CompletionStage<WorkerResult> stage  = async.fn().apply(Map.of());
-    WorkerResult                                       result = stage.toCompletableFuture().join();
-    assertThat(result.output()).containsEntry("key", "value");
-  }
+    @SuppressWarnings("unchecked")
+    @Test
+    void sync_fn_returns_bifunction() {
+        var sync = new WorkerFunction.Sync<>(
+                Map.class, Map.class, (Map input, WorkerScope scope) -> WorkerResult.of(Map.of("key", "value")));
+        var result = sync.fn().apply(Map.of(), null);
+        assertThat(result.output()).isInstanceOf(Map.class);
+        assertThat((Map<String, Object>) result.output()).containsEntry("key", "value");
+    }
 
-  @Test
-  void asyncCarriesInputType() {
-    var fn = new WorkerFunction.Async<>(String.class,
-                                        s -> java.util.concurrent.CompletableFuture.completedFuture(WorkerResult.of(Map.of("len", s.length()))));
-    assertThat(fn.inputType()).isEqualTo(String.class);
-  }
+    @Test
+    void workerFunction_declares_inputType_and_outputType() {
+        assertThat(WorkerFunction.class.getDeclaredMethods())
+                .extracting("name")
+                .contains("inputType", "outputType");
+    }
 
-  @Test
-  void asyncRejectsNullInputType() {
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-               () -> new WorkerFunction.Async<>(null,
-                                                input -> java.util.concurrent.CompletableFuture.completedFuture(WorkerResult.of(Map.of()))))
-                                   .isInstanceOf(NullPointerException.class);
-  }
+    @SuppressWarnings("unchecked")
+    @Test
+    void typedSyncCarriesInputAndOutputType() {
+        var fn = new WorkerFunction.Sync<>(
+                String.class, Integer.class,
+                (String s, WorkerScope scope) -> WorkerResult.of(s.length()));
+        assertThat(fn.inputType()).isEqualTo(String.class);
+        assertThat(fn.outputType()).isEqualTo(Integer.class);
+    }
 
-  @Test
-  void asyncRejectsNullFunction() {
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-               () -> new WorkerFunction.Async<>(String.class, null))
-                                   .isInstanceOf(NullPointerException.class);
-  }
+    @SuppressWarnings("unchecked")
+    @Test
+    void untypedSyncDefaultsToMapClass() {
+        var fn = new WorkerFunction.Sync<>(
+                Map.class, Map.class, (input, scope) -> WorkerResult.of(Map.of()));
+        assertThat(fn.inputType()).isEqualTo(Map.class);
+        assertThat(fn.outputType()).isEqualTo(Map.class);
+    }
 
-  @Test
-  void async_is_not_sync() {
-    WorkerFunction<?> fn = new WorkerFunction.Async<>(Map.class,
-                                                      input -> java.util.concurrent.CompletableFuture.completedFuture(WorkerResult.of(Map.of())));
-    assertThat(fn).isNotInstanceOf(WorkerFunction.Sync.class);
-  }
+    @Test
+    void noneHasVoidInputAndOutputType() {
+        assertThat(WorkerFunction.NONE.inputType()).isEqualTo(Void.class);
+        assertThat(WorkerFunction.NONE.outputType()).isEqualTo(Void.class);
+    }
 
-  @Test
-  void builder_asyncFunction_createsAsyncWorker() {
-    Worker worker = Worker.builder()
-                          .name("async-w").capabilityName("cap")
-                          .asyncFunction(input -> java.util.concurrent.CompletableFuture.completedFuture(
-                                  WorkerResult.of(Map.of("done", true))))
-                          .build();
-    assertThat(worker.function()).isInstanceOf(WorkerFunction.Async.class);
-  }
+    @SuppressWarnings("unchecked")
+    @Test
+    void syncRejectsNullInputType() {
+        assertThatThrownBy(
+                () -> new WorkerFunction.Sync<>(null, Map.class, (input, scope) -> WorkerResult.of(Map.of())))
+                .isInstanceOf(NullPointerException.class);
+    }
 
-  @Test
-  void builder_typedAsyncFunction_createsAsyncWorker() {
-    Worker worker = Worker.builder()
-                          .name("typed-async").capabilityName("cap")
-                          .<String>fn().applyAsync(s -> java.util.concurrent.CompletableFuture.completedFuture(
-                    WorkerResult.of(Map.of("len", s.length()))))
-                          .build();
-    assertThat(worker.function()).isInstanceOf(WorkerFunction.Async.class);
-    assertThat(worker.function().inputType()).isEqualTo(String.class);
-  }
+    @SuppressWarnings("unchecked")
+    @Test
+    void syncRejectsNullOutputType() {
+        assertThatThrownBy(
+                () -> new WorkerFunction.Sync<>(Map.class, null, (input, scope) -> WorkerResult.of(Map.of())))
+                .isInstanceOf(NullPointerException.class);
+    }
 
+    @Test
+    void syncRejectsNullFunction() {
+        assertThatThrownBy(
+                () -> new WorkerFunction.Sync<>(String.class, String.class, null))
+                .isInstanceOf(NullPointerException.class);
+    }
 
+    @Test
+    void none_is_workerFunction() {
+        assertThat(WorkerFunction.NONE).isInstanceOf(WorkerFunction.class);
+    }
+
+    @Test
+    void none_is_not_sync() {
+        assertThat(WorkerFunction.NONE).isNotInstanceOf(WorkerFunction.Sync.class);
+    }
+
+    @Test
+    void none_singleton_equals_new_instance() {
+        assertThat(WorkerFunction.NONE).isEqualTo(new WorkerFunction.None());
+    }
+
+    @Test
+    void builder_function_createsMapMapSync() {
+        Worker worker = Worker.builder()
+                              .name("w").capabilityName("cap")
+                              .function(input -> WorkerResult.of(Map.of("done", true)))
+                              .build();
+        assertThat(worker.function()).isInstanceOf(WorkerFunction.Sync.class);
+        assertThat(worker.function().inputType()).isEqualTo(Map.class);
+        assertThat(worker.function().outputType()).isEqualTo(Map.class);
+    }
+
+    @Test
+    void builder_typedFn_returning_createsTypedSync() {
+        Worker worker = Worker.builder()
+                              .name("w").capabilityName("cap")
+                              .<String>fn()
+                              .returning(Integer.class)
+                              .apply(s -> WorkerResult.of(s.length()))
+                              .build();
+        assertThat(worker.function().inputType()).isEqualTo(String.class);
+        assertThat(worker.function().outputType()).isEqualTo(Integer.class);
+    }
+
+    @Test
+    void builder_typedFn_apply_defaultsOutputToMap() {
+        Worker worker = Worker.builder()
+                              .name("w").capabilityName("cap")
+                              .<String>fn()
+                              .apply(s -> WorkerResult.of(Map.of("len", s.length())))
+                              .build();
+        assertThat(worker.function().inputType()).isEqualTo(String.class);
+        assertThat(worker.function().outputType()).isEqualTo(Map.class);
+    }
+
+    @Test
+    void builder_typedFn_returning_bifunction_with_scope() {
+        Worker worker = Worker.builder()
+                              .name("w").capabilityName("cap")
+                              .<String>fn()
+                              .returning(Integer.class)
+                              .apply((s, scope) -> WorkerResult.of(s.length()))
+                              .build();
+        assertThat(worker.function().inputType()).isEqualTo(String.class);
+        assertThat(worker.function().outputType()).isEqualTo(Integer.class);
+    }
 }
