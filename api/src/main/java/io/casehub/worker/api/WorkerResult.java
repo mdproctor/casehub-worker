@@ -1,6 +1,15 @@
 package io.casehub.worker.api;
 
-public record WorkerResult<R>(R output, WorkerOutcome<R> outcome) {
+public record WorkerResult<R>(R output, WorkerOutcome<R> outcome, String reasoning) {
+
+    public WorkerResult(R output, WorkerOutcome<R> outcome) {
+        this(output, outcome, null);
+    }
+
+    public WorkerResult<R> withReasoning(String reasoning) {
+        return new WorkerResult<>(this.output, this.outcome, reasoning);
+    }
+
     public static <R> WorkerResult<R> of(R output) {
         return new WorkerResult<>(output, WorkerOutcome.success());
     }
@@ -37,5 +46,4 @@ public record WorkerResult<R>(R output, WorkerOutcome<R> outcome) {
     public static <R> WorkerResult<R> completed(R output) {
         return new WorkerResult<>(output, new WorkerOutcome.Completed<>());
     }
-
 }
