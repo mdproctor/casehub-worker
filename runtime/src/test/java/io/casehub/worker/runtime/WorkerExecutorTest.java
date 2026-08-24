@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -274,7 +273,7 @@ class WorkerExecutorTest {
     void schemaValidator_validatesPojoInput() {
         SchemaValidator validator = new SchemaValidator();
         Capability      cap       = cap("test", REQUIRE_NAME_SCHEMA, "{}");
-        validator.ensureSchemaParsed(cap.inputSchema());
+        validator.ensureSchemaParsed(cap.inputProjection());
 
         Optional<String> valid = validator.validateInput(cap, new TestPojo("alice", 30));
         assertThat(valid).isEmpty();

@@ -16,10 +16,10 @@ class TestWorkerBuilderTest {
             input -> WorkerResult.of(Map.of("greeting", "hello")));
 
         assertThat(wc.worker().name()).isEqualTo("greet");
-        assertThat(wc.worker().capabilityNames()).containsExactly("greet");
+        assertThat(wc.worker().capabilities()).containsExactly("greet");
         assertThat(wc.capability().name()).isEqualTo("greet");
-        assertThat(wc.capability().inputSchema()).isEqualTo("{}");
-        assertThat(wc.capability().outputSchema()).isEqualTo("{}");
+        assertThat(wc.capability().inputProjection()).isEqualTo("{}");
+        assertThat(wc.capability().outputProjection()).isEqualTo("{}");
     }
 
     @Test

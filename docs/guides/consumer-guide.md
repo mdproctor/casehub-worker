@@ -35,7 +35,7 @@ public record Worker(String name, Set<String> capabilityNames, WorkerFunction<?,
                      ExecutionPolicy executionPolicy, String description)
 ```
 
-Named automated task. The `function` field holds the executable logic; `capabilityNames` declares which Capabilities this worker can serve. If `executionPolicy` is null at construction, a default `ExecutionPolicy` is assigned (3 retries).
+Named automated task. The `function` field holds the executable logic; `capabilities` declares which Capabilities this worker can serve. If `executionPolicy` is null at construction, a default `ExecutionPolicy` is assigned (3 retries).
 
 **Builder API:**
 
@@ -77,7 +77,7 @@ Static constant: `WorkerFunction.NONE` -- singleton `None` instance.
 public record Capability(String name, String inputSchema, String outputSchema, String description)
 ```
 
-Named capability tag with JSON Schema for input/output validation. Fields `name`, `inputSchema`, and `outputSchema` are required (non-null). `description` is optional.
+Named capability tag with JSON Schema for input/output validation. Fields `name`, `inputProjection`, and `outputProjection` are required (non-null). `description` is optional.
 
 **Factory:** `Capability.of(name, inputSchema, outputSchema)` -- convenience without description.
 **Builder:** `Capability.builder().name(...).inputSchema(...).outputSchema(...).description(...).build()`.

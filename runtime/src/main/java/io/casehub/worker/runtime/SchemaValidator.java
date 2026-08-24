@@ -30,11 +30,11 @@ public class SchemaValidator {
     }
 
     public Optional<String> validateInput(Capability capability, Object input) {
-        return validate(capability.inputSchema(), input);
+        return validate(capability.inputProjection(), input);
     }
 
     public Optional<String> validateOutput(Capability capability, Object output) {
-        return validate(capability.outputSchema(), output);
+        return validate(capability.outputProjection(), output);
     }
 
     private Optional<String> validate(String schemaString, Object data) {

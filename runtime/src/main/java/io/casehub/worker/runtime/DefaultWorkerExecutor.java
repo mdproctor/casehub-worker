@@ -1,6 +1,5 @@
 package io.casehub.worker.runtime;
 
-import io.casehub.platform.api.governance.BackoffStrategy;
 import io.casehub.platform.api.governance.ExecutionPolicy;
 import io.casehub.platform.api.governance.RetryPolicy;
 import io.casehub.worker.api.Capability;
@@ -22,9 +21,7 @@ import jakarta.inject.Inject;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 @ApplicationScoped
 public class DefaultWorkerExecutor implements WorkerExecutor {
@@ -46,10 +43,10 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
     @Override
     public Uni<WorkerResult> execute(Worker worker, Capability capability, Object input) {
         Objects.requireNonNull(capability, "capability");
-        if (!worker.capabilityNames().contains(capability.name())) {
+        if (!worker.capabilities().contains(capability.name())) {
             throw new IllegalArgumentException(
                     "Capability '" + capability.name() + "' not in worker '"
-                    + worker.name() + "' capabilities: " + worker.capabilityNames());
+                    + worker.name() + "' capabilities: " + worker.capabilities());
         }
 
         WorkerFunction<?, ?> fn = worker.function();
@@ -60,8 +57,8 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
                     + ", got " + (input == null ? "null" : input.getClass().getName()));
         }
 
-        schemaValidator.ensureSchemaParsed(capability.inputSchema());
-        schemaValidator.ensureSchemaParsed(capability.outputSchema());
+        schemaValidator.ensureSchemaParsed(capability.inputProjection());
+        schemaValidator.ensureSchemaParsed(capability.outputProjection());
 
         Span span = GlobalOpenTelemetry.getTracer(INSTRUMENTATION_NAME)
                                                                                        .spanBuilder("worker.execute")

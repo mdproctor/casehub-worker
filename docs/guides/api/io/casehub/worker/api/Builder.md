@@ -6,7 +6,7 @@
 
 ## Fields
 
-### `capabilityNames` (`java.util.Set<java.lang.String>`)
+### `capabilities` (`java.util.Set<java.lang.String>`)
 
 ### `description` (`java.lang.String`)
 

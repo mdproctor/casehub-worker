@@ -6,7 +6,7 @@
 
 ## Context
 
-`Capability` declares `inputSchema` and `outputSchema` as non-null `String` fields,
+`Capability` declares `inputProjection` and `outputProjection` as non-null `String` fields,
 but nothing validates inputs or outputs against them. These fields are metadata-only
 today. All existing tests use `"{}"` as placeholder schemas.
 
@@ -109,7 +109,7 @@ schema behaviour use `DefaultWorkerExecutor` directly.
 
 ### Cross-repo naming: inputSchema/outputSchema semantics
 
-The engine uses the term `outputSchema` (and `inputSchema`) in a different sense:
+The engine uses the term `outputProjection` (and `inputProjection`) in a different sense:
 the engine's `WorkerExecutor.execute()` takes `String outputSchema` as a JQ
 projection expression, not a JSON Schema validation document. The engine's
 `Binding.effectiveInputSchema()` and `WorkerScheduleEvent.effectiveInputSchema()`
@@ -121,7 +121,7 @@ Today this is harmless because all capabilities use `"{}"`, which is both valid 
 capabilities carry non-trivial JSON Schemas, the engine's JQ fallback will produce
 wrong data (interpreting a JSON Schema document as a JQ literal).
 
-The worker-api naming is correct — `inputSchema`/`outputSchema` for JSON Schema
+The worker-api naming is correct — `inputProjection`/`outputProjection` for JSON Schema
 validation documents is the natural name. The engine's use of "schema" for JQ
 projection expressions is the terminological anomaly. Resolution:
 
@@ -129,7 +129,7 @@ projection expressions is the terminological anomaly. Resolution:
   `capability.inputSchema()` as a JQ expression. The binding should always specify
   its own JQ projection explicitly.
 - The engine's `WorkerExecutor.execute()` parameter should be renamed from
-  `outputSchema` to `outputProjection` (or similar) to distinguish JQ projection
+  `outputProjection` to `outputProjection` (or similar) to distinguish JQ projection
   from JSON Schema validation.
 - Tracked as `casehubio/engine#677`, prerequisite for convergence
   (`casehub-worker#10`).

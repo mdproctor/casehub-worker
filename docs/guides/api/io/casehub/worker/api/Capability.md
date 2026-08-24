@@ -8,21 +8,21 @@
 
 ### `description` (`java.lang.String`)
 
-### `inputSchema` (`java.lang.String`)
+### `inputProjection` (`java.lang.String`)
 
 ### `name` (`java.lang.String`)
 
-### `outputSchema` (`java.lang.String`)
+### `outputProjection` (`java.lang.String`)
 
 ## Record Components
 
 ### `description` (`java.lang.String`)
 
-### `inputSchema` (`java.lang.String`)
+### `inputProjection` (`java.lang.String`)
 
 ### `name` (`java.lang.String`)
 
-### `outputSchema` (`java.lang.String`)
+### `outputProjection` (`java.lang.String`)
 
 ## Constructors
 
@@ -31,8 +31,8 @@
 #### Parameters
 
 - `name` (`java.lang.String`)
-- `inputSchema` (`java.lang.String`)
-- `outputSchema` (`java.lang.String`)
+- `inputProjection` (`java.lang.String`)
+- `outputProjection` (`java.lang.String`)
 - `description` (`java.lang.String`)
 
 ## Methods
@@ -58,8 +58,8 @@
 #### Parameters
 
 - `name` (`java.lang.String`)
-- `inputSchema` (`java.lang.String`)
-- `outputSchema` (`java.lang.String`)
+- `inputProjection` (`java.lang.String`)
+- `outputProjection` (`java.lang.String`)
 
 ### `public java.lang.String outputSchema()`
 

@@ -2,11 +2,11 @@ package io.casehub.worker.api;
 
 import java.util.Objects;
 
-public record Capability(String name, String inputSchema, String outputSchema, String description) {
+public record Capability(String name, String inputProjection, String outputProjection, String description) {
     public Capability {
         Objects.requireNonNull(name);
-        Objects.requireNonNull(inputSchema);
-        Objects.requireNonNull(outputSchema);
+        Objects.requireNonNull(inputProjection);
+        Objects.requireNonNull(outputProjection);
     }
 
     public static Capability of(String name, String inputSchema, String outputSchema) {

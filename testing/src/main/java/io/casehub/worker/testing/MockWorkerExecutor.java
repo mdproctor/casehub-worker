@@ -24,10 +24,10 @@ public class MockWorkerExecutor implements WorkerExecutor {
     @Override
     public Uni<WorkerResult> execute(Worker worker, Capability capability, Object input) {
         Objects.requireNonNull(capability, "capability");
-        if (!worker.capabilityNames().contains(capability.name())) {
+        if (!worker.capabilities().contains(capability.name())) {
             throw new IllegalArgumentException(
                     "Capability '" + capability.name() + "' not in worker '"
-                    + worker.name() + "' capabilities: " + worker.capabilityNames());
+                    + worker.name() + "' capabilities: " + worker.capabilities());
         }
         executionCount.incrementAndGet();
         lastWorkerName.set(worker.name());

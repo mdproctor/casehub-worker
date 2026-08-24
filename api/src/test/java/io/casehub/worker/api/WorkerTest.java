@@ -21,7 +21,7 @@ class WorkerTest {
                               .build();
 
         assertThat(worker.name()).isEqualTo("test-worker");
-        assertThat(worker.capabilityNames()).containsExactly("process");
+        assertThat(worker.capabilities()).containsExactly("process");
 
         WorkerFunction.Sync<?, ?> sync   = (WorkerFunction.Sync<?, ?>) worker.function();
         var result = ((WorkerFunction.Sync<Map<String, Object>, Map<String, Object>>) worker.function()).fn().apply(Map.of(), null);
@@ -37,8 +37,8 @@ class WorkerTest {
                               .function(input -> WorkerResult.of(Map.of()))
                               .build();
 
-        assertThat(worker.capabilityNames()).containsExactlyInAnyOrder("a", "b", "c");
-        assertThatThrownBy(() -> worker.capabilityNames().add("d"))
+        assertThat(worker.capabilities()).containsExactlyInAnyOrder("a", "b", "c");
+        assertThatThrownBy(() -> worker.capabilities().add("d"))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
@@ -50,7 +50,7 @@ class WorkerTest {
                               .function(input -> WorkerResult.of(Map.of()))
                               .build();
 
-        assertThat(worker.capabilityNames()).containsExactlyInAnyOrder("x", "y");
+        assertThat(worker.capabilities()).containsExactlyInAnyOrder("x", "y");
     }
 
     @Test

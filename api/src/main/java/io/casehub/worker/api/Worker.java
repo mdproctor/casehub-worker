@@ -8,14 +8,14 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public record Worker(String name, Set<String> capabilityNames, WorkerFunction<?, ?> function,
+public record Worker(String name, Set<String> capabilities, WorkerFunction<?, ?> function,
                      ExecutionPolicy executionPolicy, String description) {
     public Worker {
         Objects.requireNonNull(name);
-        Objects.requireNonNull(capabilityNames);
+        Objects.requireNonNull(capabilities);
         Objects.requireNonNull(function);
         if (executionPolicy == null) {executionPolicy = new ExecutionPolicy();}
-        capabilityNames = Set.copyOf(capabilityNames);
+        capabilities = Set.copyOf(capabilities);
     }
 
     public static Builder builder() {return new Builder();}

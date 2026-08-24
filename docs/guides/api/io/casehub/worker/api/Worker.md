@@ -6,7 +6,7 @@
 
 ## Fields
 
-### `capabilityNames` (`java.util.Set<java.lang.String>`)
+### `capabilities` (`java.util.Set<java.lang.String>`)
 
 ### `description` (`java.lang.String`)
 
@@ -18,7 +18,7 @@
 
 ## Record Components
 
-### `capabilityNames` (`java.util.Set<java.lang.String>`)
+### `capabilities` (`java.util.Set<java.lang.String>`)
 
 ### `description` (`java.lang.String`)
 
@@ -35,7 +35,7 @@
 #### Parameters
 
 - `name` (`java.lang.String`)
-- `capabilityNames` (`java.util.Set<java.lang.String>`)
+- `capabilities` (`java.util.Set<java.lang.String>`)
 - `function` (`io.casehub.worker.api.WorkerFunction<?,?>`)
 - `executionPolicy` (`ExecutionPolicy`)
 - `description` (`java.lang.String`)

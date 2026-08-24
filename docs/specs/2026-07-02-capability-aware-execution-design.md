@@ -8,7 +8,7 @@
 
 `WorkerExecutor.execute(Worker, Map<String, Object>)` takes a Worker and input but has no
 way to know which capability is being exercised. A Worker declares multiple capability names
-(`Set<String>`), and each maps to a `Capability` with its own `inputSchema`/`outputSchema`.
+(`Set<String>`), and each maps to a `Capability` with its own `inputProjection`/`outputProjection`.
 Without knowing which capability is being invoked, the executor cannot validate schemas (#7),
 trace at capability granularity, or assert the Worker actually supports the requested capability.
 

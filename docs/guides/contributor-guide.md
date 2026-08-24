@@ -23,12 +23,12 @@ All types in `io.casehub.worker.api`:
 
 | Type | Kind | Type Parameters | Purpose |
 |------|------|-----------------|---------|
-| `Worker` | record | -- | Named automated task: `name`, `capabilityNames` (Set), `function` (WorkerFunction), `executionPolicy`, `description`. Inner `Builder` class. |
+| `Worker` | record | -- | Named automated task: `name`, `capabilities` (Set), `function` (WorkerFunction), `executionPolicy`, `description`. Inner `Builder` class. |
 | `WorkerFunction<T,R>` | interface | T=input, R=output | Marker with `inputType()` and `outputType()`. Three implementations: `Sync`, `Persistent`, `None`. |
 | `WorkerFunction.Sync<T,R>` | record | T=input, R=output | `fn` field: `BiFunction<T, WorkerScope, WorkerResult<R>>`. The standard execution variant. |
 | `WorkerFunction.Persistent<T>` | record | T=input | `handler` field: `Consumer<PersistentScope<T>>`. Long-running event-loop workers. `outputType()` returns `Void.class`. Implements `WorkerFunction<T, Void>`. |
 | `WorkerFunction.None` | record | -- | No-op. `inputType()` and `outputType()` return `Void.class`. Implements `WorkerFunction<Void, Void>`. Singleton: `WorkerFunction.NONE`. |
-| `Capability` | record | -- | `name`, `inputSchema`, `outputSchema` (all required), `description` (optional). Factory: `Capability.of(...)`. Inner `Builder`. |
+| `Capability` | record | -- | `name`, `inputProjection`, `outputProjection` (all required), `description` (optional). Factory: `Capability.of(...)`. Inner `Builder`. |
 | `WorkerResult<R>` | record | R=output | `output` (R) + `outcome` (WorkerOutcome). 10 factory methods covering all outcome variants. |
 | `WorkerOutcome<R>` | sealed interface | R=output | Five variants: `Success<R>(PlannedAction)`, `Declined<R>(reason)`, `Failed<R>(reason)`, `Expired<R>(reason)`, `Completed<R>()`. Static factories: `success()`, `success(PlannedAction)`, `completed()`. |
 | `PlannedAction` | record | -- | `description` (required), `actionType` (required), `parameters` (Map, defaults to empty). Attached to `Success` outcomes. |
