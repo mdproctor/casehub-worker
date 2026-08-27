@@ -12,11 +12,7 @@ public sealed interface WorkerOutcome<R> {
 
     record Declined<R>(String reason) implements WorkerOutcome<R> {}
 
-    record Failed<R>(String reason, FailureClass hint) implements WorkerOutcome<R> {
-        public Failed(String reason) {
-            this(reason, null);
-        }
-    }
+    record Failed<R>(String reason) implements WorkerOutcome<R> {}
 
     record Expired<R>(String reason) implements WorkerOutcome<R> {}
 
