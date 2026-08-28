@@ -35,14 +35,6 @@ public record WorkerResult<R>(R output, WorkerOutcome<R> outcome, String reasoni
         return new WorkerResult<>(partialOutput, new WorkerOutcome.Failed<>(reason));
     }
 
-    public static <R> WorkerResult<R> failed(String reason, FailureClass hint) {
-        return new WorkerResult<>(null, new WorkerOutcome.Failed<>(reason, hint));
-    }
-
-    public static <R> WorkerResult<R> failed(String reason, FailureClass hint, R partialOutput) {
-        return new WorkerResult<>(partialOutput, new WorkerOutcome.Failed<>(reason, hint));
-    }
-
 
     public static <R> WorkerResult<R> expired(String reason) {
         return new WorkerResult<>(null, new WorkerOutcome.Expired<>(reason));
