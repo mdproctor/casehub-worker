@@ -245,6 +245,39 @@ class WorkerTest {
         assertThat(sync.inputType()).isEqualTo(Map.class);
     }
 
+
+    @Test
+    void definitionRefStoredOnWorker() {
+        Worker w = Worker.builder()
+                         .name("test")
+                         .capabilityName("cap")
+                         .noFunction()
+                         .definitionRef("workflows/research.yaml")
+                         .build();
+        assertThat(w.definitionRef()).isEqualTo("workflows/research.yaml");
+    }
+
+    @Test
+    void definitionRefDefaultsToNull() {
+        Worker w = Worker.builder()
+                         .name("test")
+                         .capabilityName("cap")
+                         .noFunction()
+                         .build();
+        assertThat(w.definitionRef()).isNull();
+    }
+
+    @Test
+    void inlineRefPreservedAsIs() {
+        Worker w = Worker.builder()
+                         .name("test")
+                         .capabilityName("cap")
+                         .noFunction()
+                         .definitionRef("#analysis-flow")
+                         .build();
+        assertThat(w.definitionRef()).isEqualTo("#analysis-flow");
+    }
+
     @Test
     void legacyFunctionStillWorks() {
         Worker worker = Worker.builder()
