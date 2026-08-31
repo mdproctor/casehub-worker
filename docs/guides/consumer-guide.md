@@ -31,7 +31,7 @@ Extracted from `casehub-engine-api` so that Workers are a shareable foundation p
 ### Worker
 
 ```java
-public record Worker(String name, Set<String> capabilityNames, WorkerFunction<?, ?> function,
+public record Worker(String name, Set<String> capabilities, WorkerFunction<?, ?> function,
                      ExecutionPolicy executionPolicy, String description)
 ```
 
@@ -61,20 +61,21 @@ public interface WorkerFunction<T, R> {
 }
 ```
 
-Marker interface parameterised by input type `T` and output type `R`. Three implementations:
+Marker interface parameterised by input type `T` and output type `R`. Four implementations:
 
 | Variant | Record | Signature | Purpose |
 |---------|--------|-----------|---------|
 | **Sync** | `Sync<T, R>(Class<T>, Class<R>, BiFunction<T, WorkerScope, WorkerResult<R>>)` | Synchronous execution receiving input + scope | Standard worker functions |
 | **Persistent** | `Persistent<T>(Class<T>, Consumer<PersistentScope<T>>)` | Long-running event loop -- blocks on `nextEvent()` | Streaming/stateful workers. Output type is `Void`. |
 | **None** | `None()` | No-op, `inputType()` and `outputType()` return `Void.class` | External/proxy workers with no local function |
+| **ExchangeProcessor** | `ExchangeProcessor<T, R>(Class<T>, Class<R>, BiFunction<Exchange<T>, WorkerScope, WorkerResult<Exchange<R>>>)` | Exchange-aware execution with headers/properties | Worker-to-worker pipelines via `andThen()` composition |
 
 Static constant: `WorkerFunction.NONE` -- singleton `None` instance.
 
 ### Capability
 
 ```java
-public record Capability(String name, String inputSchema, String outputSchema, String description)
+public record Capability(String name, String inputProjection, String outputProjection, String description)
 ```
 
 Named capability tag with JSON Schema for input/output validation. Fields `name`, `inputProjection`, and `outputProjection` are required (non-null). `description` is optional.
@@ -161,6 +162,23 @@ public interface WorkerScope {
 Minimal execution scope passed as an explicit parameter to `Sync` functions. Provides case/task identity and the ability to invoke nested workers. `accumulatedState()` returns state accumulated across invocations (defaults to empty map).
 
 `WorkerRuntime` (in `casehub-engine-api`) extends this interface with engine-specific methods (`context()`, `spawnCase()`). The `WorkerScope` type lives in worker-api to avoid circular dependencies with engine-api.
+
+**Channel access:** `WorkerScope` provides `DataChannel` access for inter-worker communication:
+- `channel(String name)` — returns a `DataChannel<T>` by name (requires engine context)
+- `channel(ChannelRef<T> ref)` — type-safe variant using `ChannelRef`
+- `createChannel(String name, Class<T> recordType)` — creates a new channel and returns its `ChannelRef`
+
+### Exchange<T>
+
+Immutable message envelope for worker-to-worker data flow. Carries a typed `body`, immutable `headers` (metadata), and `properties` (pipeline state). Factory: `Exchange.of(body)`, `Exchange.of(body, headers)`. Transform: `withBody(U)`, `withHeader(key, value)`, `withProperty(key, value)`, `withoutHeader(key)`. Typed accessors: `header(key)`, `header(key, default)`, `property(key)`.
+
+### DataChannel<T>
+
+Bidirectional typed channel for inter-worker communication. `send(Exchange<T>)` publishes, `receive()` blocks for the next exchange, `isClosed()` checks status, `close()` terminates. Implements `AutoCloseable`.
+
+### ChannelRef<T>
+
+Type-safe reference to a named channel. `ChannelRef.of(name, type)` creates a reference. Carries `name()` and `recordType()`. Implements `Serializable`.
 
 ### PersistentScope<T>
 
